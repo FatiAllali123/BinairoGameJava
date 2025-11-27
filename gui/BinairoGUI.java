@@ -89,7 +89,8 @@ public class BinairoGUI extends JFrame {
         add(createStatusPanel(), BorderLayout.SOUTH);
         add(createSolverPanel(), BorderLayout.EAST);
         
-        pack();
+        setSize(850, 700);
+        setMinimumSize(new Dimension(600, 450));
         setLocationRelativeTo(null);
         setVisible(true);
     }
