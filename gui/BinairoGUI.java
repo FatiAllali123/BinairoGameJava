@@ -85,7 +85,12 @@ public class BinairoGUI extends JFrame {
         gridWrapper.add(gridPanel, BorderLayout.CENTER);
         add(gridWrapper, BorderLayout.CENTER);
         
-        add(createControlPanel(), BorderLayout.NORTH);
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(DARKER_BG);
+        topPanel.add(createTitlePanel(), BorderLayout.NORTH);
+        topPanel.add(createControlPanel(), BorderLayout.CENTER);
+        add(topPanel, BorderLayout.NORTH);
+        
         add(createStatusPanel(), BorderLayout.SOUTH);
         add(createSolverPanel(), BorderLayout.EAST);
         
@@ -93,6 +98,72 @@ public class BinairoGUI extends JFrame {
         setMinimumSize(new Dimension(600, 450));
         setLocationRelativeTo(null);
         setVisible(true);
+    }
+    
+    private JPanel createTitlePanel() {
+        // The main panel that will have the decorations
+        JPanel decorativePanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int width = getWidth();
+                int height = getHeight();
+                
+                // Central 40% is for the title, side is 30% each
+                int sideWidth = (int)(width * 0.3);
+                
+                java.util.Random rand = new java.util.Random(42);
+                
+                // Use a color from the palette with low alpha
+                Color decorColor = new Color(ACCENT_COLOR.getRed(), ACCENT_COLOR.getGreen(), ACCENT_COLOR.getBlue(), 40);
+                g2d.setColor(decorColor);
+
+                for (int i = 0; i < 25; i++) {
+                    int size = rand.nextInt(8) + 4;
+                    
+                    // Left side
+                    int x1 = rand.nextInt(sideWidth - size);
+                    int y1 = rand.nextInt(height - size);
+                    if (rand.nextBoolean()) {
+                        g2d.fillOval(x1, y1, size, size);
+                    } else {
+                        g2d.fillRect(x1, y1, size, size);
+                    }
+
+                    // Right side
+                    int x2 = width - sideWidth + rand.nextInt(sideWidth - size);
+                    int y2 = rand.nextInt(height - size);
+                    if (rand.nextBoolean()) {
+                        g2d.fillOval(x2, y2, size, size);
+                    } else {
+                        g2d.fillRect(x2, y2, size, size);
+                    }
+                }
+            }
+        };
+        decorativePanel.setBackground(DARKER_BG);
+        decorativePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+
+        JLabel titleLabel = new JLabel("BINAIRO", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 36));
+        titleLabel.setForeground(PRIMARY_LIGHT);
+        
+        // The shadow effect from before
+        titleLabel.setUI(new javax.swing.plaf.basic.BasicLabelUI() {
+            @Override
+            protected void paintEnabledText(JLabel l, Graphics g, String s, int textX, int textY) {
+                g.setColor(new Color(0, 0, 0, 70));
+                g.drawString(s, textX + 2, textY + 2);
+                g.setColor(l.getForeground());
+                g.drawString(s, textX, textY);
+            }
+        });
+
+        decorativePanel.add(titleLabel, BorderLayout.CENTER);
+        return decorativePanel;
     }
     
     private JPanel createControlPanel() {
