@@ -9,34 +9,25 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
 
-/**
- * Panneau graphique pour afficher et interagir avec la grille Binairo.
- * 
- * FONCTIONNALITÉS :
- *   - Affichage de la grille avec lignes et cases
- *   - Clic pour placer 0 ou 1
- *   - Affichage des violations en rouge
- *   - Cases fixes (grille initiale) en gris
- *   - Cases remplies par le joueur en noir
- */
 public class GridPanel extends JPanel {
     
     private BinairoGrid grid;
-    private BinairoGrid initialGrid;  // Grille initiale (cases fixes)
+    private BinairoGrid initialGrid;
     private BinairoValidator validator;
     
-    private int cellSize = 60;  // Taille d'une case en pixels
     private int selectedRow = -1;
     private int selectedCol = -1;
     
-    // Couleurs
-    private final Color COLOR_BACKGROUND = Color.WHITE;
-    private final Color COLOR_GRID_LINES = Color.GRAY;
-    private final Color COLOR_SELECTED = new Color(200, 230, 255);
-    private final Color COLOR_FIXED = Color.DARK_GRAY;
-    private final Color COLOR_USER = Color.BLACK;
-    private final Color COLOR_VIOLATION = Color.RED;
-    private final Color COLOR_HINT = new Color(0, 200, 0);
+    // Couleurs premium
+    private final Color COLOR_BACKGROUND = new Color(33, 47, 61);
+    private final Color COLOR_CELL_EMPTY = new Color(240, 242, 245);
+    private final Color COLOR_SELECTED = new Color(52, 152, 219);
+    private final Color COLOR_SELECTED_LIGHT = new Color(174, 214, 241);
+    private final Color COLOR_FIXED = new Color(44, 62, 80);
+    private final Color COLOR_USER = new Color(41, 128, 185);
+    private final Color COLOR_VIOLATION = new Color(231, 76, 60);
+    private final Color COLOR_GRID = new Color(150, 160, 170);
+    private final Color COLOR_GRID_THICK = new Color(52, 73, 94);
     
     /**
      * Constructeur.
@@ -46,12 +37,8 @@ public class GridPanel extends JPanel {
         this.initialGrid = new BinairoGrid(size);
         this.validator = new BinairoValidator();
         
-        // Configurer le panneau
-        int panelSize = size * cellSize + 1;
-        setPreferredSize(new Dimension(panelSize, panelSize));
         setBackground(COLOR_BACKGROUND);
         
-        // Ajouter les listeners
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -76,7 +63,7 @@ public class GridPanel extends JPanel {
      */
     public void setGrid(BinairoGrid newGrid) {
         this.grid = new BinairoGrid(newGrid);
-        this.initialGrid = new BinairoGrid(newGrid);  // Sauvegarder comme référence
+        this.initialGrid = new BinairoGrid(newGrid);
         this.selectedRow = -1;
         this.selectedCol = -1;
         repaint();
@@ -128,51 +115,78 @@ public class GridPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
         
-        // Antialiasing pour un meilleur rendu
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
-                            RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         
         int size = grid.getSize();
+        if (size == 0) return;
+
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
+        int padding = 15;
+        int minDim = Math.min(panelWidth, panelHeight) - 2 * padding;
+        int cellSize = minDim > 0 ? minDim / size : 0;
+        if (cellSize == 0) return;
+
+        int gridSize = cellSize * size;
+        int offsetX = (panelWidth - gridSize) / 2;
+        int offsetY = (panelHeight - gridSize) / 2;
         
-        // Dessiner les cases
-        drawCells(g2d, size);
-        
-        // Dessiner les valeurs
-        drawValues(g2d, size);
-        
-        // Dessiner les violations
-        drawViolations(g2d);
-        
-        // Dessiner la grille
-        drawGrid(g2d, size);
+        drawCells(g2d, size, cellSize, offsetX, offsetY);
+        drawValues(g2d, size, cellSize, offsetX, offsetY);
+        drawViolations(g2d, size, cellSize, offsetX, offsetY);
+        drawGrid(g2d, size, cellSize, offsetX, offsetY);
     }
     
     /**
-     * Dessine les cases (fond + sélection).
+     * Dessine les cases avec coins arrondis et ombres.
      */
-    private void drawCells(Graphics2D g2d, int size) {
+    private void drawCells(Graphics2D g2d, int size, int cellSize, int offsetX, int offsetY) {
+        int padding = 7;
+        int cellSizeWithPadding = cellSize - padding;
+        
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
-                int x = col * cellSize;
-                int y = row * cellSize;
+                int x = col * cellSize + offsetX;
+                int y = row * cellSize + offsetY;
                 
-                // Fond de la case
+                Color bgColor;
+                if (row == selectedRow && col == selectedCol) {
+                    bgColor = COLOR_SELECTED_LIGHT;
+                } else if (initialGrid.get(row, col) != -1) {
+                    bgColor = new Color(220, 225, 235);
+                } else {
+                    bgColor = COLOR_CELL_EMPTY;
+                }
+                
+                g2d.setColor(new Color(0, 0, 0, 25));
+                g2d.fillRoundRect(x + 3, y + 3, cellSizeWithPadding, cellSizeWithPadding, 10, 10);
+                
+                g2d.setColor(bgColor);
+                g2d.fillRoundRect(x, y, cellSizeWithPadding, cellSizeWithPadding, 10, 10);
+                
                 if (row == selectedRow && col == selectedCol) {
                     g2d.setColor(COLOR_SELECTED);
-                    g2d.fillRect(x + 1, y + 1, cellSize - 1, cellSize - 1);
+                    g2d.setStroke(new BasicStroke(3.5f));
+                } else {
+                    g2d.setColor(COLOR_GRID);
+                    g2d.setStroke(new BasicStroke(1.8f));
                 }
+                g2d.drawRoundRect(x, y, cellSizeWithPadding, cellSizeWithPadding, 10, 10);
             }
         }
     }
     
     /**
-     * Dessine les valeurs (0 et 1).
+     * Dessine les valeurs avec polices modernes.
      */
-    private void drawValues(Graphics2D g2d, int size) {
-        Font font = new Font("Arial", Font.BOLD, cellSize / 2);
+    private void drawValues(Graphics2D g2d, int size, int cellSize, int offsetX, int offsetY) {
+        Font font = new Font("Segoe UI", Font.BOLD, cellSize / 2 + 2);
         g2d.setFont(font);
-        
         FontMetrics fm = g2d.getFontMetrics();
+        
+        int padding = 7;
+        int cellSizeWithPadding = cellSize - padding;
         
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
@@ -181,60 +195,51 @@ public class GridPanel extends JPanel {
                 if (value != -1) {
                     String text = String.valueOf(value);
                     
-                    // Choisir la couleur
-                    if (initialGrid.get(row, col) != -1) {
-                        g2d.setColor(COLOR_FIXED);  // Case fixe
-                    } else {
-                        g2d.setColor(COLOR_USER);   // Case remplie par le joueur
-                    }
+                    g2d.setColor(initialGrid.get(row, col) != -1 ? COLOR_FIXED : COLOR_USER);
                     
-                    // Centrer le texte
-                    int x = col * cellSize + (cellSize - fm.stringWidth(text)) / 2;
-                    int y = row * cellSize + (cellSize - fm.getHeight()) / 2 + fm.getAscent();
+                    int x = col * cellSize + offsetX;
+                    int y = row * cellSize + offsetY;
                     
-                    g2d.drawString(text, x, y);
+                    int textX = x + (cellSizeWithPadding - fm.stringWidth(text)) / 2;
+                    int textY = y + (cellSizeWithPadding - fm.getHeight()) / 2 + fm.getAscent();
+                    
+                    g2d.drawString(text, textX, textY);
                 }
             }
         }
     }
     
     /**
-     * Dessine les violations en rouge.
+     * Dessine les violations avec indicateurs.
      */
-    private void drawViolations(Graphics2D g2d) {
+    private void drawViolations(Graphics2D g2d, int size, int cellSize, int offsetX, int offsetY) {
         List<BinairoValidator.Violation> violations = validator.findViolations(grid);
         
-        g2d.setColor(COLOR_VIOLATION);
-        g2d.setStroke(new BasicStroke(3));
+        int padding = 7;
+        int cellSizeWithPadding = cellSize - padding;
         
         for (BinairoValidator.Violation v : violations) {
-            int x = v.col * cellSize;
-            int y = v.row * cellSize;
+            int x = v.col * cellSize + offsetX;
+            int y = v.row * cellSize + offsetY;
             
-            // Dessiner un cercle rouge autour de la case
-            g2d.drawOval(x + 5, y + 5, cellSize - 10, cellSize - 10);
+            g2d.setColor(new Color(231, 76, 60, 110));
+            g2d.fillRoundRect(x, y, cellSizeWithPadding, cellSizeWithPadding, 10, 10);
+            
+            g2d.setColor(COLOR_VIOLATION);
+            g2d.setStroke(new BasicStroke(3.5f));
+            g2d.drawRoundRect(x, y, cellSizeWithPadding, cellSizeWithPadding, 10, 10);
         }
-        
-        g2d.setStroke(new BasicStroke(1));
     }
     
     /**
-     * Dessine la grille (lignes).
+     * Dessine la grille.
      */
-    private void drawGrid(Graphics2D g2d, int size) {
-        g2d.setColor(COLOR_GRID_LINES);
+    private void drawGrid(Graphics2D g2d, int size, int cellSize, int offsetX, int offsetY) {
+        int gridSize = size * cellSize;
         
-        // Lignes verticales
-        for (int col = 0; col <= size; col++) {
-            int x = col * cellSize;
-            g2d.drawLine(x, 0, x, size * cellSize);
-        }
-        
-        // Lignes horizontales
-        for (int row = 0; row <= size; row++) {
-            int y = row * cellSize;
-            g2d.drawLine(0, y, size * cellSize, y);
-        }
+        g2d.setColor(COLOR_GRID_THICK);
+        g2d.setStroke(new BasicStroke(2.5f));
+        g2d.drawRect(offsetX, offsetY, gridSize, gridSize);
     }
     
     // ==================== INTERACTIONS ====================
@@ -243,15 +248,26 @@ public class GridPanel extends JPanel {
      * Gère les clics de souris.
      */
     private void handleClick(MouseEvent e) {
-        requestFocusInWindow();  // Pour capturer les événements clavier
-        
-        int col = e.getX() / cellSize;
-        int row = e.getY() / cellSize;
+        requestFocusInWindow();
         
         int size = grid.getSize();
+        if (size == 0) return;
+
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
+        int padding = 15;
+        int minDim = Math.min(panelWidth, panelHeight) - 2 * padding;
+        int cellSize = minDim > 0 ? minDim / size : 0;
+        if (cellSize == 0) return;
+
+        int gridSize = cellSize * size;
+        int offsetX = (panelWidth - gridSize) / 2;
+        int offsetY = (panelHeight - gridSize) / 2;
+
+        int col = (e.getX() - offsetX) / cellSize;
+        int row = (e.getY() - offsetY) / cellSize;
         
         if (row >= 0 && row < size && col >= 0 && col < size) {
-            // Ne pas modifier les cases fixes
             if (initialGrid.get(row, col) != -1) {
                 return;
             }
@@ -259,25 +275,20 @@ public class GridPanel extends JPanel {
             selectedRow = row;
             selectedCol = col;
             
-            // Clic gauche : placer 0 ou 1 (cycle)
             if (SwingUtilities.isLeftMouseButton(e)) {
                 int currentValue = grid.get(row, col);
-                int newValue = (currentValue + 2) % 3 - 1;  // Cycle : -1 → 0 → 1 → -1
+                int newValue = (currentValue + 2) % 3 - 1;
                 grid.set(row, col, newValue);
-            }
-            // Clic droit : effacer
-            else if (SwingUtilities.isRightMouseButton(e)) {
+            } else if (SwingUtilities.isRightMouseButton(e)) {
                 grid.set(row, col, -1);
             }
             
             repaint();
             
-            // Vérifier si résolu
             if (isSolved()) {
                 JOptionPane.showMessageDialog(this, 
-                    "Félicitations ! Grille résolue correctement !",
-                    "Victoire",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Congratulations! Grid solved correctly!",
+                    "Victory", JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
@@ -290,7 +301,6 @@ public class GridPanel extends JPanel {
             return;
         }
         
-        // Ne pas modifier les cases fixes
         if (initialGrid.get(selectedRow, selectedCol) != -1) {
             return;
         }
@@ -320,12 +330,10 @@ public class GridPanel extends JPanel {
             repaint();
         }
         
-        // Vérifier si résolu
         if (isSolved()) {
             JOptionPane.showMessageDialog(this, 
-                "Félicitations ! Grille résolue correctement !",
-                "Victoire",
-                JOptionPane.INFORMATION_MESSAGE);
+                "Congratulations! Grid solved correctly!",
+                "Victory", JOptionPane.INFORMATION_MESSAGE);
         }
     }
     
@@ -336,30 +344,24 @@ public class GridPanel extends JPanel {
         int[] hint = validator.findObviousMove(grid);
         
         if (hint != null) {
-            int row = hint[0];
-            int col = hint[1];
+            selectedRow = hint[0];
+            selectedCol = hint[1];
             int value = hint[2];
             
-            // Mettre en évidence la case
-            selectedRow = row;
-            selectedCol = col;
-            
             String message = String.format(
-                "Suggestion : Placer %d en (%d, %d)",
-                value, row + 1, col + 1
+                "Suggestion: Place %d at (%d, %d)",
+                value, hint[0] + 1, hint[1] + 1
             );
             
             JOptionPane.showMessageDialog(this, 
                 message,
-                "Aide",
-                JOptionPane.INFORMATION_MESSAGE);
+                "Hint", JOptionPane.INFORMATION_MESSAGE);
             
             repaint();
         } else {
             JOptionPane.showMessageDialog(this, 
-                "Aucune suggestion évidente disponible.",
-                "Aide",
-                JOptionPane.INFORMATION_MESSAGE);
+                "No obvious suggestion available.",
+                "Hint", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }

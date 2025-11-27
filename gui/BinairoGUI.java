@@ -15,39 +15,38 @@ import solver.MACSolver;
 import util.GridSaver;
 
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 
-/**
- * Interface graphique principale pour le jeu Binairo.
- * 
- * FONCTIONNALITÉS :
- *   - Nouveau jeu (choix taille + difficulté)
- *   - Résolution automatique (choix du solveur)
- *   - Aide (suggestion)
- *   - Réinitialiser / Effacer
- *   - Sauvegarder / Charger
- *   - Comparaison des solveurs
- */
 public class BinairoGUI extends JFrame {
+    
+    // Couleurs modernes - Palette premium
+    private static final Color PRIMARY_COLOR = new Color(41, 128, 185);
+    private static final Color PRIMARY_LIGHT = new Color(52, 152, 219);
+    private static final Color PRIMARY_DARK = new Color(30, 104, 155);
+    private static final Color ACCENT_COLOR = new Color(46, 204, 113);
+    private static final Color ACCENT_LIGHT = new Color(76, 224, 138);
+    private static final Color DARK_BG = new Color(33, 47, 61);
+    private static final Color DARKER_BG = new Color(22, 32, 44);
+    private static final Color LIGHT_BG = new Color(236, 240, 241);
+    private static final Color TEXT_COLOR = new Color(52, 73, 94);
+    private static final Color TEXT_LIGHT = new Color(230, 230, 230);
     
     private GridPanel gridPanel;
     private BinairoGenerator generator;
     private BinairoValidator validator;
-    
-    // Solveurs
     private AbstractCSPSolver currentSolver;
     
-    // Composants UI
     private JLabel statusLabel;
     private JComboBox<String> sizeComboBox;
     private JComboBox<String> difficultyComboBox;
     private JComboBox<String> solverComboBox;
     
-    /**
-     * Constructeur.
-     */
     public BinairoGUI() {
         super("Binairo - Jeu de Logique CSP");
+        
+        applyModernTheme();
         
         this.generator = new BinairoGenerator();
         this.validator = new BinairoValidator();
@@ -55,138 +54,201 @@ public class BinairoGUI extends JFrame {
         
         initializeUI();
         
-        // Générer une grille par défaut
         generateNewGame(8, 0.5);
     }
     
-    /**
-     * Initialise l'interface utilisateur.
-     */
+    private void applyModernTheme() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        Font defaultFont = new Font("Segoe UI", Font.PLAIN, 12);
+        Font boldFont = new Font("Segoe UI", Font.BOLD, 13);
+        
+        UIManager.put("Button.font", boldFont);
+        UIManager.put("Label.font", defaultFont);
+        UIManager.put("ComboBox.font", defaultFont);
+        UIManager.put("TitledBorder.font", boldFont);
+    }
+    
     private void initializeUI() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(15, 15));
+        getContentPane().setBackground(DARKER_BG);
+        ((JPanel)getContentPane()).setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         
-        // Panel central : grille
         gridPanel = new GridPanel(8);
-        add(gridPanel, BorderLayout.CENTER);
+        JPanel gridWrapper = new JPanel(new BorderLayout());
+        gridWrapper.setBackground(DARKER_BG);
+        gridWrapper.add(gridPanel, BorderLayout.CENTER);
+        add(gridWrapper, BorderLayout.CENTER);
         
-        // Panel supérieur : contrôles
         add(createControlPanel(), BorderLayout.NORTH);
-        
-        // Panel inférieur : statut
         add(createStatusPanel(), BorderLayout.SOUTH);
-        
-        // Panel droit : solveurs
         add(createSolverPanel(), BorderLayout.EAST);
         
         pack();
-        setLocationRelativeTo(null);  // Centrer
+        setLocationRelativeTo(null);
         setVisible(true);
     }
     
-    /**
-     * Crée le panneau de contrôles.
-     */
     private JPanel createControlPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        panel.setBorder(BorderFactory.createTitledBorder("Contrôles"));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 15)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                GradientPaint gradient = new GradientPaint(0, 0, DARK_BG, getWidth(), 0, DARKER_BG);
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                
+                super.paintComponent(g);
+            }
+        };
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(41, 128, 185, 200)),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
         
-        // Taille
-        panel.add(new JLabel("Taille :"));
-        sizeComboBox = new JComboBox<>(new String[]{"4x4", "6x6", "8x8", "10x10", "12x12"});
+        JLabel sizeLabel = createStyledLabel("Taille :", Font.BOLD);
+        panel.add(sizeLabel);
+        
+        sizeComboBox = createStyledComboBox(new String[]{"4x4", "6x6", "8x8", "10x10", "12x12"});
         sizeComboBox.setSelectedItem("8x8");
         panel.add(sizeComboBox);
         
-        // Difficulté
-        panel.add(new JLabel("Difficulté :"));
-        difficultyComboBox = new JComboBox<>(new String[]{"Facile", "Moyen", "Difficile"});
+        panel.add(createSeparator());
+        
+        JLabel diffLabel = createStyledLabel("Difficulte :", Font.BOLD);
+        panel.add(diffLabel);
+        
+        difficultyComboBox = createStyledComboBox(new String[]{"Facile", "Moyen", "Difficile"});
         difficultyComboBox.setSelectedItem("Moyen");
         panel.add(difficultyComboBox);
         
-        // Bouton Nouveau jeu
-        JButton newGameButton = new JButton("Nouveau Jeu");
-        newGameButton.addActionListener(e -> newGame());
-        panel.add(newGameButton);
+        panel.add(createSeparator());
         
-        // Bouton Réinitialiser
-        JButton resetButton = new JButton("Réinitialiser");
-        resetButton.addActionListener(e -> gridPanel.reset());
-        panel.add(resetButton);
-        
-        // Bouton Effacer
-        JButton clearButton = new JButton("Effacer");
-        clearButton.addActionListener(e -> gridPanel.clear());
-        panel.add(clearButton);
-        
-        // Bouton Aide
-        JButton hintButton = new JButton("Aide");
-        hintButton.addActionListener(e -> gridPanel.showHint());
-        panel.add(hintButton);
-        
-        // Bouton Sauvegarder
-        JButton saveButton = new JButton("Sauvegarder");
-        saveButton.addActionListener(e -> saveGame());
-        panel.add(saveButton);
-        
-        // Bouton Charger
-        JButton loadButton = new JButton("Charger");
-        loadButton.addActionListener(e -> loadGame());
-        panel.add(loadButton);
+        panel.add(createModernButton("Nouveau", e -> newGame(), PRIMARY_LIGHT));
+        panel.add(createModernButton("Reinit", e -> gridPanel.reset(), new Color(155, 89, 182)));
+        panel.add(createModernButton("Effacer", e -> gridPanel.clear(), new Color(230, 126, 34)));
+        panel.add(createModernButton("Aide", e -> gridPanel.showHint(), ACCENT_LIGHT));
+        panel.add(createModernButton("Save", e -> saveGame(), new Color(52, 73, 152)));
+        panel.add(createModernButton("Load", e -> loadGame(), new Color(44, 62, 80)));
         
         return panel;
     }
     
-    /**
-     * Crée le panneau de statut.
-     */
+    private JLabel createStyledLabel(String text, int fontStyle) {
+        JLabel label = new JLabel(text);
+        label.setForeground(TEXT_LIGHT);
+        label.setFont(new Font("Segoe UI", fontStyle, 12));
+        return label;
+    }
+    
+    private JSeparator createSeparator() {
+        JSeparator sep = new JSeparator(JSeparator.VERTICAL);
+        sep.setPreferredSize(new Dimension(1, 25));
+        sep.setForeground(new Color(100, 100, 100));
+        return sep;
+    }
+    
     private JPanel createStatusPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setBorder(BorderFactory.createTitledBorder("Statut"));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                GradientPaint gradient = new GradientPaint(0, 0, DARKER_BG, getWidth(), 0, DARK_BG);
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                
+                super.paintComponent(g);
+            }
+        };
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(46, 204, 113, 200)),
+            BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
         
-        statusLabel = new JLabel("Prêt");
+        statusLabel = new JLabel("✓ Prêt");
+        statusLabel.setForeground(ACCENT_LIGHT);
+        statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         panel.add(statusLabel);
         
         return panel;
     }
     
-    /**
-     * Crée le panneau des solveurs.
-     */
     private JPanel createSolverPanel() {
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(new Color(0, 0, 0, 30));
+                g2d.fillRoundRect(3, 3, getWidth() - 6, getHeight() - 6, 15, 15);
+                
+                GradientPaint gradient = new GradientPaint(0, 0, DARK_BG, 0, getHeight(), DARKER_BG);
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth() - 3, getHeight() - 3, 15, 15);
+                
+                super.paintComponent(g);
+            }
+        };
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder("Résolution Automatique"));
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(PRIMARY_COLOR, 2),
+            BorderFactory.createEmptyBorder(20, 15, 20, 15)
+        ));
+        panel.setPreferredSize(new Dimension(220, 0));
         
-        // Choix du solveur
-        JPanel solverChoicePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        solverChoicePanel.add(new JLabel("Solveur :"));
+        JLabel titleLabel = new JLabel("AUTO-SOLVE");
+        titleLabel.setForeground(PRIMARY_LIGHT);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(20));
         
-        solverComboBox = new JComboBox<>(new String[]{
+        JLabel solverLabel = new JLabel("Select Solver:");
+        solverLabel.setForeground(TEXT_LIGHT);
+        solverLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        solverLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(solverLabel);
+        panel.add(Box.createVerticalStrut(8));
+        
+        solverComboBox = createStyledComboBox(new String[]{
             "Backtracking",
             "Forward Checking",
             "AC-3",
             "AC-4",
-            "Heuristiques (MRV+DEG+LCV)",
-            "MAC (le plus puissant)"
+            "Heuristiques",
+            "MAC (Best)"
         });
-        solverComboBox.setSelectedIndex(4);  // Heuristiques par défaut
+        solverComboBox.setSelectedIndex(4);
         solverComboBox.addActionListener(e -> updateSolver());
-        solverChoicePanel.add(solverComboBox);
+        solverComboBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        solverComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(solverComboBox);
         
-        panel.add(solverChoicePanel);
+        panel.add(Box.createVerticalStrut(18));
         
-        // Bouton Résoudre
-        JButton solveButton = new JButton("Résoudre Automatiquement");
+        JButton solveButton = createModernButton("SOLVE", e -> solveAutomatically(), PRIMARY_LIGHT);
         solveButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        solveButton.addActionListener(e -> solveAutomatically());
-        panel.add(Box.createVerticalStrut(10));
+        solveButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         panel.add(solveButton);
         
-        // Bouton Comparer
-        JButton compareButton = new JButton("Comparer Tous les Solveurs");
+        panel.add(Box.createVerticalStrut(12));
+        
+        JButton compareButton = createModernButton("COMPARE", e -> compareAllSolvers(), ACCENT_LIGHT);
         compareButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        compareButton.addActionListener(e -> compareAllSolvers());
-        panel.add(Box.createVerticalStrut(10));
+        compareButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         panel.add(compareButton);
         
         panel.add(Box.createVerticalGlue());
@@ -194,11 +256,87 @@ public class BinairoGUI extends JFrame {
         return panel;
     }
     
-    // ==================== ACTIONS ====================
+    private JButton createModernButton(String text, java.awt.event.ActionListener listener, Color baseColor) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                Color bgColor = getModel().isArmed() ? baseColor.brighter() : baseColor;
+                
+                g2d.setColor(new Color(0, 0, 0, 40));
+                g2d.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
+                
+                GradientPaint gradient = new GradientPaint(0, 0, bgColor, 0, getHeight(), baseColor.darker());
+                g2d.setPaint(gradient);
+                g2d.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, 8, 8);
+                
+                g2d.setColor(new Color(255, 255, 255, 100));
+                g2d.setStroke(new BasicStroke(1.5f));
+                g2d.drawRoundRect(0, 0, getWidth() - 2, getHeight() - 2, 8, 8);
+                
+                super.paintComponent(g);
+            }
+        };
+        
+        button.addActionListener(listener);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setMargin(new Insets(10, 15, 10, 15));
+        
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.repaint();
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.repaint();
+            }
+        });
+        
+        return button;
+    }
     
-    /**
-     * Génère un nouveau jeu.
-     */
+    private JComboBox<String> createStyledComboBox(String[] items) {
+        JComboBox<String> comboBox = new JComboBox<>(items) {
+            @Override
+            public void paint(Graphics g) {
+                super.paint(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            }
+        };
+        
+        comboBox.setBackground(new Color(50, 60, 75));
+        comboBox.setForeground(TEXT_LIGHT);
+        comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        
+        // Personnaliser le renderer pour les items
+        comboBox.setRenderer(new javax.swing.plaf.basic.BasicComboBoxRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                
+                this.setForeground(TEXT_LIGHT);
+                this.setBackground(isSelected ? new Color(52, 152, 219) : new Color(50, 60, 75));
+                this.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                this.setText(value != null ? value.toString() : "");
+                
+                return this;
+            }
+        });
+        
+        return comboBox;
+    }
+    
     private void newGame() {
         String sizeStr = (String) sizeComboBox.getSelectedItem();
         int size = Integer.parseInt(sizeStr.split("x")[0]);
@@ -214,13 +352,9 @@ public class BinairoGUI extends JFrame {
         generateNewGame(size, difficulty);
     }
     
-    /**
-     * Génère une nouvelle grille.
-     */
     private void generateNewGame(int size, double difficulty) {
-        statusLabel.setText("Génération en cours...");
+        statusLabel.setText("Generating...");
         
-        // Générer dans un thread séparé pour ne pas bloquer l'UI
         SwingWorker<BinairoGrid, Void> worker = new SwingWorker<>() {
             @Override
             protected BinairoGrid doInBackground() {
@@ -232,20 +366,26 @@ public class BinairoGUI extends JFrame {
                 try {
                     BinairoGrid grid = get();
                     
-                    // Recréer le GridPanel avec la nouvelle taille
-                    remove(gridPanel);
+                    Container parent = gridPanel.getParent();
+                    if (parent != null) {
+                        remove(parent);
+                    }
+                    
                     gridPanel = new GridPanel(size);
                     gridPanel.setGrid(grid);
-                    add(gridPanel, BorderLayout.CENTER);
+                    JPanel gridWrapper = new JPanel(new BorderLayout());
+                    gridWrapper.setBackground(DARKER_BG);
+                    gridWrapper.add(gridPanel, BorderLayout.CENTER);
+                    add(gridWrapper, BorderLayout.CENTER);
                     
-                    pack();
-                    statusLabel.setText("Nouvelle grille " + size + "x" + size + " générée");
+                    revalidate();
+                    repaint();
+                    
+                    statusLabel.setText("Grid " + size + "x" + size + " generated");
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(BinairoGUI.this,
-                        "Erreur lors de la génération : " + e.getMessage(),
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
-                    statusLabel.setText("Erreur de génération");
+                        "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    statusLabel.setText("Generation error");
                 }
             }
         };
@@ -253,9 +393,6 @@ public class BinairoGUI extends JFrame {
         worker.execute();
     }
     
-    /**
-     * Met à jour le solveur sélectionné.
-     */
     private void updateSolver() {
         int index = solverComboBox.getSelectedIndex();
         
@@ -269,21 +406,15 @@ public class BinairoGUI extends JFrame {
         }
     }
     
-    /**
-     * Résout automatiquement la grille.
-     */
     private void solveAutomatically() {
-        statusLabel.setText("Résolution en cours...");
+        statusLabel.setText("Solving...");
         
         BinairoGrid currentGrid = gridPanel.getGrid();
         
         SwingWorker<BinairoState, Void> worker = new SwingWorker<>() {
-            long startTime;
-            
             @Override
             protected BinairoState doInBackground() {
                 BinairoState initialState = new BinairoState(currentGrid);
-                startTime = System.currentTimeMillis();
                 return currentSolver.solveWithTiming(initialState);
             }
             
@@ -291,36 +422,29 @@ public class BinairoGUI extends JFrame {
             protected void done() {
                 try {
                     BinairoState solution = get();
-                    long endTime = System.currentTimeMillis();
                     
                     if (solution != null && solution.isSolved()) {
                         gridPanel.setGrid(solution.getGrid());
                         
                         String message = String.format(
-                            "Résolu en %d ms\nNœuds explorés : %d\nBacktracks : %d",
+                            "Solved in %d ms\nNodes: %d\nBacktracks: %d",
                             currentSolver.getSolvingTime(),
                             currentSolver.getNodesExplored(),
                             currentSolver.getBacktrackCount()
                         );
                         
-                        JOptionPane.showMessageDialog(BinairoGUI.this,
-                            message,
-                            "Solution trouvée",
-                            JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(BinairoGUI.this, message,
+                            "Solution Found", JOptionPane.INFORMATION_MESSAGE);
                         
-                        statusLabel.setText("Résolu avec " + currentSolver.getName());
+                        statusLabel.setText("Solved with " + currentSolver.getName());
                     } else {
                         JOptionPane.showMessageDialog(BinairoGUI.this,
-                            "Aucune solution trouvée",
-                            "Échec",
-                            JOptionPane.WARNING_MESSAGE);
-                        statusLabel.setText("Pas de solution");
+                            "No solution found", "Failed", JOptionPane.WARNING_MESSAGE);
+                        statusLabel.setText("No solution");
                     }
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(BinairoGUI.this,
-                        "Erreur : " + e.getMessage(),
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
+                        "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         };
@@ -328,19 +452,17 @@ public class BinairoGUI extends JFrame {
         worker.execute();
     }
     
-    /**
-     * Compare tous les solveurs.
-     */
     private void compareAllSolvers() {
         BinairoGrid currentGrid = new BinairoGrid(gridPanel.getGrid());
-        
-        statusLabel.setText("Comparaison en cours...");
+        statusLabel.setText("Comparing...");
         
         SwingWorker<String, Void> worker = new SwingWorker<>() {
             @Override
             protected String doInBackground() {
                 StringBuilder report = new StringBuilder();
-                report.append("=== COMPARAISON DES SOLVEURS ===\n\n");
+                report.append("====================================\n");
+                report.append("   SOLVER COMPARISON REPORT\n");
+                report.append("====================================\n\n");
                 
                 AbstractCSPSolver[] solvers = {
                     new BacktrackingSolver(),
@@ -355,11 +477,11 @@ public class BinairoGUI extends JFrame {
                     BinairoState initialState = new BinairoState(currentGrid);
                     BinairoState solution = solver.solveWithTiming(initialState);
                     
-                    report.append(solver.getName()).append(" :\n");
-                    report.append("  Temps : ").append(solver.getSolvingTime()).append(" ms\n");
-                    report.append("  Nœuds : ").append(solver.getNodesExplored()).append("\n");
-                    report.append("  Backtracks : ").append(solver.getBacktrackCount()).append("\n");
-                    report.append("  Solution : ").append(solution != null ? "OUI" : "NON").append("\n\n");
+                    report.append("[").append(solver.getName()).append("]\n");
+                    report.append("  Time: ").append(solver.getSolvingTime()).append(" ms\n");
+                    report.append("  Nodes: ").append(solver.getNodesExplored()).append("\n");
+                    report.append("  Backtracks: ").append(solver.getBacktrackCount()).append("\n");
+                    report.append("  Status: ").append(solution != null ? "SUCCESS" : "FAILED").append("\n\n");
                 }
                 
                 return report.toString();
@@ -372,22 +494,21 @@ public class BinairoGUI extends JFrame {
                     
                     JTextArea textArea = new JTextArea(report);
                     textArea.setEditable(false);
-                    textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+                    textArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
+                    textArea.setBackground(DARKER_BG);
+                    textArea.setForeground(ACCENT_LIGHT);
+                    textArea.setMargin(new Insets(10, 10, 10, 10));
                     
                     JScrollPane scrollPane = new JScrollPane(textArea);
-                    scrollPane.setPreferredSize(new Dimension(500, 400));
+                    scrollPane.setPreferredSize(new Dimension(550, 420));
                     
-                    JOptionPane.showMessageDialog(BinairoGUI.this,
-                        scrollPane,
-                        "Comparaison des Solveurs",
-                        JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(BinairoGUI.this, scrollPane,
+                        "Solver Comparison", JOptionPane.INFORMATION_MESSAGE);
                     
-                    statusLabel.setText("Comparaison terminée");
+                    statusLabel.setText("Comparison done");
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(BinairoGUI.this,
-                        "Erreur : " + e.getMessage(),
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
+                        "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         };
@@ -395,65 +516,48 @@ public class BinairoGUI extends JFrame {
         worker.execute();
     }
     
-    // ==================== SAUVEGARDE / CHARGEMENT ====================
-    
-    /**
-     * Sauvegarde la grille.
-     */
     private void saveGame() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Sauvegarder la grille");
+        fileChooser.setDialogTitle("Save Grid");
         
-        int result = fileChooser.showSaveDialog(this);
-        
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
-                GridSaver.save(gridPanel.getGrid(), file.getAbsolutePath());
-                statusLabel.setText("Grille sauvegardée : " + file.getName());
-                JOptionPane.showMessageDialog(this,
-                    "Grille sauvegardée avec succès",
-                    "Sauvegarde",
-                    JOptionPane.INFORMATION_MESSAGE);
+                GridSaver.save(gridPanel.getGrid(), fileChooser.getSelectedFile().getAbsolutePath());
+                statusLabel.setText("Saved: " + fileChooser.getSelectedFile().getName());
+                JOptionPane.showMessageDialog(this, "Grid saved successfully", "Save", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this,
-                    "Erreur de sauvegarde : " + e.getMessage(),
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Save error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
     
-    /**
-     * Charge une grille.
-     */
     private void loadGame() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Charger une grille");
+        fileChooser.setDialogTitle("Load Grid");
         
-        int result = fileChooser.showOpenDialog(this);
-        
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
-                BinairoGrid loadedGrid = GridSaver.load(file.getAbsolutePath());
+                BinairoGrid loadedGrid = GridSaver.load(fileChooser.getSelectedFile().getAbsolutePath());
                 
-                // Recréer le GridPanel avec la nouvelle grille
                 int size = loadedGrid.getSize();
-                remove(gridPanel);
+                Container parent = gridPanel.getParent();
+                if (parent != null) {
+                    remove(parent);
+                }
+                
                 gridPanel = new GridPanel(size);
                 gridPanel.setGrid(loadedGrid);
-                add(gridPanel, BorderLayout.CENTER);
+                JPanel gridWrapper = new JPanel(new BorderLayout());
+                gridWrapper.setBackground(DARKER_BG);
+                gridWrapper.add(gridPanel, BorderLayout.CENTER);
+                add(gridWrapper, BorderLayout.CENTER);
                 
-                pack();
-                statusLabel.setText("Grille chargée : " + file.getName());
+                revalidate();
+                repaint();
+                
+                statusLabel.setText("Loaded: " + fileChooser.getSelectedFile().getName());
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this,
-                    "Erreur de chargement : " + e.getMessage(),
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Load error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

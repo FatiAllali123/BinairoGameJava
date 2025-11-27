@@ -22,17 +22,23 @@ public class Main {
         // C'est OBLIGATOIRE pour Swing pour éviter les problèmes de concurrence
         SwingUtilities.invokeLater(() -> {
             try {
-                // Essayer d'utiliser le Look and Feel du système d'exploitation
-                // Cela rend l'application plus native (Windows, macOS, Linux)
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                
+                // Utiliser le Look and Feel Nimbus pour un style moderne et unifié
+                for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                    if ("Nimbus".equals(info.getName())) {
+                        UIManager.setLookAndFeel(info.getClassName());
+                        break;
+                    }
+                }
                 System.out.println("Look and Feel : " + UIManager.getLookAndFeel().getName());
-                
+
             } catch (Exception e) {
-                // Si erreur, utiliser le Look and Feel par défaut (Metal pour Java)
-                System.err.println("Impossible de charger le Look and Feel système");
-                System.err.println("Utilisation du Look and Feel par défaut");
-                e.printStackTrace();
+                // En cas d'erreur, on se rabat sur le L&F du système
+                try {
+                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                } catch (Exception ex) {
+                    System.err.println("Impossible de charger le Look and Feel Nimbus ou Système.");
+                    e.printStackTrace();
+                }
             }
             
             // Créer et afficher la fenêtre principale
